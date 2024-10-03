@@ -1,0 +1,50 @@
+﻿USE [OneSys_REINSUREPRO]
+
+DROP TABLE IF EXISTS [dbo].[TempContractReplace];
+
+CREATE TABLE [dbo].[TempContractReplace]
+(
+    [PolicyID] INT,
+    [LocationNumber] INT,
+    [ContractFr] VARCHAR(25),
+    [ContractTo] VARCHAR(25),
+    [LOB] VARCHAR(5)
+);
+
+--Place here
+INSERT INTO [dbo].[TempContractReplace]
+(
+    [PolicyID],
+    [LocationNumber],
+    [ContractFr],
+    [ContractTo],
+    [LOB]
+)
+%CONTRACT_MOVE%
+
+GO
+
+DROP TABLE IF EXISTS [#ContractReplace];
+SELECT DISTINCT
+       *
+INTO [#ContractReplace]
+FROM [dbo].[TempContractReplace];
+
+TRUNCATE TABLE [dbo].[TempContractReplace];
+
+INSERT INTO [dbo].[TempContractReplace]
+(
+    [PolicyID],
+    [LocationNumber],
+    [ContractFr],
+    [ContractTo],
+    [LOB]
+)
+SELECT [#ContractReplace].[PolicyID],       -- PolicyID - int
+       [#ContractReplace].[LocationNumber], -- LocationNumber - int
+       [#ContractReplace].[ContractFr],     -- ContractFr - varchar(25)
+       [#ContractReplace].[ContractTo],     -- ContractTo - varchar(25)
+       [#ContractReplace].[LOB]             -- LOB - varchar(5)
+FROM [#ContractReplace];
+
+DROP TABLE IF EXISTS [#ContractReplace];

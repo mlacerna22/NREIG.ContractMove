@@ -1,0 +1,17 @@
+NREIG.ContractMove/*.user
+NREIG.ContractMove/bin/
+NREIG.ContractMove/bin/Debug/
+NREIG.ContractMove/bin/Release/
+NREIG.ContractMove/obj/
+NREIG.ContractMove/obj/Debug/
+NREIG.ContractMove/obj/Release/
+*.pubxml
+*.pubxml.*
+*.suo
+/.vs/
+/NREIG.ContractMove/bin/
+/NREIG.ContractMove/obj/
+/NREIG.ContractMove/bin/Debug/
+/NREIG.ContractMove/obj/Debug/
+/NREIG.ContractMove/bin/Release/
+/NREIG.ContractMove/obj/Release/

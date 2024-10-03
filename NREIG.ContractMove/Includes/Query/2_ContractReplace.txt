@@ -1,0 +1,411 @@
+﻿USE [OneSys_REINSUREPRO];
+
+DECLARE @IsCommitTran BIT = %IsCommitTran%;
+DECLARE @AsOfDate DATE = %AsOfDate%; 
+DECLARE @showActiveProp BIT = %showActiveProp%;
+
+DECLARE @SysDate DATETIME = GETDATE();
+DECLARE @tblResult TABLE
+(
+    [ID] INT,
+    [ContractID] INT,
+    [ContractEligibID] INT
+);
+
+DECLARE @tbContractRate TABLE
+(
+    [ID] INT,
+    [ContractID] INT,
+    [ContractEligibID] INT,
+    [ContractRateID] INT
+);
+
+BEGIN TRAN;
+
+DROP TABLE IF EXISTS [#ContractReplace];
+
+SELECT IDENTITY(INT, 1, 1) AS [ID],
+       *
+INTO [#ContractReplace]
+FROM [dbo].[TempContractReplace]
+    CROSS APPLY
+(
+    SELECT TOP (1)
+           [RunPolicyStatistical].[RunPolicyStatisticalID],
+           [ContractEligib].[ContractEligibID],
+           [ContractEligib].[ContractID],
+           [ContractEligib].[Country],
+           [ContractEligib].[Table],
+           [ContractEligib].[Company],
+           [ContractEligib].[EffectiveDate],
+           [ContractEligib].[ExpirationDate],
+           [ContractEligib].[ReleaseDate],
+           [ContractEligib].[Status],
+           [ContractEligib].[Key1],
+           [ContractEligib].[Key2],
+           [ContractEligib].[Key3],
+           [ContractEligib].[Key4],
+           [ContractEligib].[Key5],
+           [ContractEligib].[Key6],
+           [ContractEligib].[Key7],
+           [ContractEligib].[Key8],
+           [ContractEligib].[Key9],
+           [ContractEligib].[Key10],
+           [ContractEligib].[Key11],
+           [ContractEligib].[Key12],
+           [ContractEligib].[Key13],
+           [ContractEligib].[Key14],
+           [ContractEligib].[Key15],
+           [ContractEligib].[Key16],
+           [ContractEligib].[Key17],
+           [ContractEligib].[Key18],
+           [ContractEligib].[Key19],
+           [ContractEligib].[Key20],
+           [ContractEligib].[Data1],
+           [ContractEligib].[Data2],
+           [ContractEligib].[Data3],
+           [ContractEligib].[Divisor] AS [EligibDivisor],
+           [ContractRate].[ContractRateID],
+           [ContractRate].[Rev],
+           [ContractRate].[State],
+           [ContractRate].[County],
+           [ContractRate].[City],
+           [ContractRate].[Zone],
+           [ContractRate].[Sequence],
+           [ContractRate].[Rate],
+           [ContractRate].[FTRate],
+           [ContractRate].[ICC],
+           [ContractRate].[FTICC],
+           [ContractRate].[MinPrem],
+           [ContractRate].[Divisor] AS [ContractRateDivisor],
+           [ContractRate].[RecCreatedBy],
+           [ContractRate].[RecDateCreated],
+           [ContractRate].[UserID],
+           [ContractRate].[DateLastUpdate],
+           [ContractRate].[FloodDed]
+    FROM [dbo].[fn_NREIGBordereau](@AsOfDate, DEFAULT, DEFAULT, DEFAULT, DEFAULT) AS [Borderau]
+        INNER JOIN [dbo].[RunPolicyStatistical]
+            ON [RunPolicyStatistical].[RunPolicyStatisticalID] = [Borderau].[RunPolicyStatisticalID]
+        INNER JOIN [dbo].[ContractRate]
+            ON [ContractRate].[ContractRateID] = CASE [TempContractReplace].[LOB]
+                                                     WHEN 'CF' THEN
+                                                         [RunPolicyStatistical].[CFContractRateID]
+                                                     WHEN 'TRIA' THEN
+                                                         [RunPolicyStatistical].[TRIAContractRateID]
+                                                     WHEN 'EM' THEN
+                                                         [RunPolicyStatistical].[EMContractRateID]
+                                                     WHEN 'FLD' THEN
+                                                         [RunPolicyStatistical].[FloodContractRateID]
+                                                     WHEN 'GL' THEN
+                                                         [RunPolicyStatistical].[GLContractRateID]
+                                                     WHEN 'TPP' THEN
+                                                         [RunPolicyStatistical].[TPPContractRateID]
+                                                     WHEN 'SL' THEN
+                                                         [RunPolicyStatistical].[SLContractRateID]
+                                                     WHEN 'EO' THEN
+                                                         [RunPolicyStatistical].[EOContractRateID]
+                                                     WHEN 'EB' THEN
+                                                         [RunPolicyStatistical].[EBContractRateID]
+                                                 END
+        INNER JOIN [dbo].[ContractEligib]
+            ON [ContractEligib].[ContractEligibID] = [ContractRate].[ContractEligibID]
+    WHERE [RunPolicyStatistical].[PolicyID] = [TempContractReplace].[PolicyID]
+          AND [RunPolicyStatistical].[LocationNumber] = [TempContractReplace].[LocationNumber]
+          AND [RunPolicyStatistical].[Period] <= EOMONTH(@AsOfDate)
+    ORDER BY [RunPolicyStatistical].[Period] DESC
+) AS [Stat];
+
+INSERT INTO [dbo].[ContractEligib]
+(
+    [ContractID],
+    [Country],
+    [LOB],
+    [Table],
+    [Company],
+    [EffectiveDate],
+    [ExpirationDate],
+    [ReleaseDate],
+    [Status],
+    [IsActive],
+    [Key1],
+    [Key2],
+    [Key3],
+    [Key4],
+    [Key5],
+    [Key6],
+    [Key7],
+    [Key8],
+    [Key9],
+    [Key10],
+    [Key11],
+    [Key12],
+    [Key13],
+    [Key14],
+    [Key15],
+    [Key16],
+    [Key17],
+    [Key18],
+    [Key19],
+    [Key20],
+    [Data1],
+    [Data2],
+    [Data3],
+    [Divisor],
+    [RecCreatedBy],
+    [RecDateCreated],
+    [UserID],
+    [DateLastUpdate]
+)
+OUTPUT [Inserted].[RecCreatedBy],
+       [Inserted].[ContractID],
+       [Inserted].[ContractEligibID]
+INTO @tblResult
+(
+    [ID],
+    [ContractID],
+    [ContractEligibID]
+)
+SELECT [Contract].[ContractID],             -- ContractID - int
+       [#ContractReplace].[Country],        -- Country - varchar(20)
+       [#ContractReplace].[LOB],            -- LOB - varchar(5)
+       [#ContractReplace].[Table],          -- Table - varchar(25)
+       [Contract].[Code],                   -- Company - varchar(20)
+       [#ContractReplace].[EffectiveDate],  -- EffectiveDate - datetime
+       [#ContractReplace].[ExpirationDate], -- ExpirationDate - datetime
+       [#ContractReplace].[ReleaseDate],    -- ReleaseDate - datetime
+       'CR',                                -- Status - varchar(2)
+       0,                                   -- IsActive - bit
+       [#ContractReplace].[Key1],           -- Key1 - varchar(20)
+       [#ContractReplace].[Key2],           -- Key2 - varchar(20)
+       [#ContractReplace].[Key3],           -- Key3 - varchar(20)
+       [#ContractReplace].[Key4],           -- Key4 - varchar(20)
+       [#ContractReplace].[Key5],           -- Key5 - varchar(20)
+       [#ContractReplace].[Key6],           -- Key6 - varchar(20)
+       [#ContractReplace].[Key7],           -- Key7 - varchar(20)
+       [#ContractReplace].[Key8],           -- Key8 - varchar(20)
+       [#ContractReplace].[Key9],           -- Key9 - varchar(20)
+       [#ContractReplace].[Key10],          -- Key10 - varchar(20)
+       [#ContractReplace].[Key11],          -- Key11 - varchar(20)
+       [#ContractReplace].[Key12],          -- Key12 - varchar(20)
+       [#ContractReplace].[Key13],          -- Key13 - varchar(20)
+       [#ContractReplace].[Key14],          -- Key14 - varchar(20)
+       [#ContractReplace].[Key15],          -- Key15 - varchar(20)
+       [#ContractReplace].[Key16],          -- Key16 - varchar(20)
+       [#ContractReplace].[Key17],          -- Key17 - varchar(20)
+       [#ContractReplace].[Key18],          -- Key18 - varchar(20)
+       [#ContractReplace].[Key19],          -- Key19 - varchar(20)
+       [#ContractReplace].[Key20],          -- Key20 - varchar(20)
+       [#ContractReplace].[Data1],          -- Data1 - varchar(20)
+       [#ContractReplace].[Data2],          -- Data2 - varchar(20)
+       [#ContractReplace].[Data3],          -- Data3 - varchar(20)
+       [#ContractReplace].[EligibDivisor],  -- Divisor - varchar(20)
+       [#ContractReplace].[ID],             -- RecCreatedBy - int
+       @SysDate,                            -- RecDateCreated - datetime
+       1,                                   -- UserID - int
+       @SysDate                             -- DateLastUpdate - datetime
+FROM [#ContractReplace]
+    INNER JOIN [dbo].[Contract]
+        ON [Contract].[Code] = [#ContractReplace].[ContractTo]
+           AND [Contract].[LOB] = [#ContractReplace].[LOB]
+WHERE [Contract].[IsActive] = 1;
+
+
+INSERT INTO [dbo].[ContractRate]
+(
+    [ContractID],
+    [ContractEligibID],
+    [Rev],
+    [IsActive],
+    [State],
+    [County],
+    [City],
+    [Zone],
+    [Sequence],
+    [Rate],
+    [ICC],
+    [MinPrem],
+    [Divisor],
+    [RecCreatedBy],
+    [RecDateCreated],
+    [UserID],
+    [DateLastUpdate],
+    [FloodDed]
+)
+OUTPUT [Inserted].[RecCreatedBy],
+       [Inserted].[ContractID],
+       [Inserted].[ContractEligibID],
+       [Inserted].[ContractRateID]
+INTO @tbContractRate
+(
+    [ID],
+    [ContractID],
+    [ContractEligibID],
+    [ContractRateID]
+)
+SELECT [@tblResult].[ContractID],                -- ContractID - int
+       [@tblResult].[ContractEligibID],          -- ContractEligibID - int
+       [#ContractReplace].[Rev],                 -- Rev - smallint
+       0,                                        -- IsActive - bit
+       [#ContractReplace].[State],               -- State - varchar(2)
+       [#ContractReplace].[County],              -- County - varchar(35)
+       [#ContractReplace].[City],                -- City - varchar(35)
+       [#ContractReplace].[Zone],                -- Zone - varchar(20)
+       [#ContractReplace].[Sequence],            -- Sequence - smallint
+       [#ContractReplace].[Rate],                -- Rate - decimal(9, 4)
+       [#ContractReplace].[ICC],                 -- ICC - decimal(9, 4)
+       [#ContractReplace].[MinPrem],             -- MinPrem - decimal(9, 4)
+       [#ContractReplace].[ContractRateDivisor], -- Divisor - decimal(9, 4)
+       [@tblResult].[ID],                        -- RecCreatedBy - int
+       @SysDate,                                 -- RecDateCreated - datetime
+       1,                                        -- UserID - int
+       @SysDate,                                 -- DateLastUpdate - datetime
+       [#ContractReplace].[FloodDed]             -- FloodDed - money
+FROM [#ContractReplace]
+    INNER JOIN @tblResult
+        ON [@tblResult].[ID] = [#ContractReplace].[ID];
+
+
+INSERT INTO [dbo].[ContractReplacement]
+(
+    [EffectiveDate],
+    [OldContractID],
+    [OldContractRateID],
+    [NewContractID],
+    [NewContractRateID],
+    [NewRate],
+    [IsActive],
+    [LOB],
+    [PolicyID],
+    [LocationNumber],
+    [RecDateCreated]
+)
+SELECT @AsOfDate,                           -- EffectiveDate - date
+       [#ContractReplace].[ContractID],     -- OldContractID - int
+       [#ContractReplace].[ContractRateID], -- OldContractRateID - int
+       [@tbContractRate].[ContractID],      -- NewContractID - int
+       [@tbContractRate].[ContractRateID],  -- NewContractRateID - int
+       [#ContractReplace].[Rate],           -- NewRate - money
+       1,                                   -- IsActive - bit
+       [#ContractReplace].[LOB],            -- LOB - varchar(5)
+       [#ContractReplace].[PolicyID],       -- PolicyID - int
+       [#ContractReplace].[LocationNumber], -- LocationNumber - int
+       @SysDate                             -- RecDateCreated - datetime
+FROM [#ContractReplace]
+    INNER JOIN @tbContractRate
+        ON [@tbContractRate].[ID] = [#ContractReplace].[ID];
+
+
+SELECT [dbo].[fn_GetPolicyNumber_ByPolicyID]([TempContractReplace].[PolicyID]) AS [Account],
+       [TempContractReplace].[PolicyID],
+       [TempContractReplace].[LocationNumber],
+       [vw_PolicyLocSched].[DelPeriod],
+       [TempContractReplace].[LOB],
+       [TempContractReplace].[ContractFr],
+       [TempContractReplace].[ContractTo],
+       [#ContractReplace].[Company] AS [OrigContract],
+       [dbo].[fn_GetContractCode]([@tbContractRate].[ContractID]) AS [ContractReplace],
+       [#ContractReplace].[ContractRateID],
+       [#ContractReplace].[ContractEligibID],
+       [#ContractReplace].[ContractID],
+       [#ContractReplace].[Key1],
+       [#ContractReplace].[Key2],
+       [#ContractReplace].[Key3],
+       [#ContractReplace].[Key4],
+       [#ContractReplace].[Key5],
+       [#ContractReplace].[Key6],
+       [#ContractReplace].[Key7],
+       [#ContractReplace].[Key8],
+       [#ContractReplace].[Key9],
+       [#ContractReplace].[Key10],
+       [#ContractReplace].[Key11],
+       [#ContractReplace].[Key12],
+       [#ContractReplace].[Key13],
+       [#ContractReplace].[Key14],
+       [#ContractReplace].[Key15],
+       [#ContractReplace].[Key16],
+       [#ContractReplace].[Key17],
+       [#ContractReplace].[Key18],
+       [#ContractReplace].[Key19],
+       [#ContractReplace].[Key20],
+       [#ContractReplace].[Data1],
+       [#ContractReplace].[Data2],
+       [#ContractReplace].[Data3],
+       [#ContractReplace].[EligibDivisor],
+       [#ContractReplace].[State],
+       [#ContractReplace].[County],
+       [#ContractReplace].[City],
+       [#ContractReplace].[Zone],
+       [#ContractReplace].[Sequence],
+       [#ContractReplace].[Rate],
+       [#ContractReplace].[ICC],
+       [#ContractReplace].[FTICC],
+       [#ContractReplace].[MinPrem],
+       [#ContractReplace].[ContractRateDivisor],
+       [#ContractReplace].[FloodDed]
+FROM [dbo].[TempContractReplace]
+    LEFT JOIN [dbo].[vw_PolicyLocSched]
+        ON [vw_PolicyLocSched].[PolicyID] = [TempContractReplace].[PolicyID]
+           AND [vw_PolicyLocSched].[LocationNumber] = [TempContractReplace].[LocationNumber]
+    LEFT JOIN [#ContractReplace]
+        ON [#ContractReplace].[PolicyID] = [TempContractReplace].[PolicyID]
+           AND [#ContractReplace].[LocationNumber] = [TempContractReplace].[LocationNumber]
+           AND [#ContractReplace].[LOB] = [TempContractReplace].[LOB]
+    LEFT JOIN @tbContractRate
+        ON [@tbContractRate].[ID] = [#ContractReplace].[ID]
+ORDER BY [TempContractReplace].[PolicyID],
+         [TempContractReplace].[LocationNumber];
+
+SELECT [BDX].[RunPolicyStatisticalID],
+       [BDX].[PolicyID],
+       [dbo].[fn_GetPolicyNumber_ByPolicyID]([BDX].[PolicyID]) AS [Account],
+       [BDX].[LocationNumber],
+       [BDX].[EffectFromDate],
+       [BDX].[DelEffectFromDate],
+       [TempContractReplace].[LOB],
+       [TempContractReplace].[ContractFr],
+       [TempContractReplace].[ContractTo],
+       [Contract].[BDXContract],
+       IIF([TempContractReplace].[ContractTo] <> [Contract].[BDXContract], 'Yes', '') AS [Diff]
+FROM [dbo].[fn_NREIGBordereau](@AsOfDate, DEFAULT, DEFAULT, DEFAULT, DEFAULT) AS [BDX]
+    INNER JOIN [dbo].[TempContractReplace]
+        ON [TempContractReplace].[PolicyID] = [BDX].[PolicyID]
+           AND [TempContractReplace].[LocationNumber] = [BDX].[LocationNumber]
+    CROSS APPLY
+(
+    SELECT [dbo].[fn_GetContractCode](   CASE [TempContractReplace].[LOB]
+                                             WHEN 'CF' THEN
+                                                 [BDX].[CFContractID]
+                                             WHEN 'TRIA' THEN
+                                                 [BDX].[TRIAContractID]
+                                             WHEN 'EM' THEN
+                                                 [BDX].[EMContractID]
+                                             WHEN 'FLD' THEN
+                                                 [BDX].[FloodContractID]
+                                             WHEN 'GL' THEN
+                                                 [BDX].[GLContractID]
+                                             WHEN 'TPP' THEN
+                                                 [BDX].[TPPContractID]
+                                             WHEN 'SL' THEN
+                                                 [BDX].[SLContractID]
+                                             WHEN 'EO' THEN
+                                                 [BDX].[EOContractID]
+                                             WHEN 'EB' THEN
+                                                 [BDX].[EBContractID]
+                                         END
+                                     ) AS [BDXContract]
+) AS [Contract];
+
+IF @showActiveProp = 1
+BEGIN
+    EXEC [dbo].[pr_NREIG_ActiveProperty] @Period = @AsOfDate,        -- datetime
+                                         @PolicyIDs = '',            -- varchar(150)
+                                         @GeneralAgentIDs = '',      -- varchar(100)
+                                         @IsIncludeQuestions = NULL, -- bit
+                                         @IsIncludeXLC = NULL;       -- bit
+END;
+
+
+IF @IsCommitTran = 1
+    COMMIT TRAN;
+ELSE
+    ROLLBACK TRAN;
